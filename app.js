@@ -3,7 +3,7 @@
 const express = require("express");
 var csrf = require("tiny-csrf");
 const app = express();
-const { Admin } = require("./models");
+const { Admin , Election } = require("./models");
 const bodyParser = require("body-parser");
 var cookieParser = require("cookie-parser");
 app.use(bodyParser.json());
@@ -54,10 +54,10 @@ passport.use(
       },
       (username, password, done) => {
         Admin.findOne({ where: { email: username } })
-          .then(async (admin) => {
-            const result = await bcrypt.compare(password, admin.password);
+          .then(async (user) => {
+            const result = await bcrypt.compare(password, user.password);
             if (result) {
-              return done(null, admin);
+              return done(null, user);
             } else {
               return done(null, false, { message: "Invalid password" });
             }
@@ -68,15 +68,15 @@ passport.use(
       }
     )
   );
-  passport.serializeUser((admin, done) => {
-    console.log("Serializing user in session", admin.id);
-    done(null, admin.id);
+  passport.serializeUser((user, done) => {
+    console.log("Serializing user in session", user.id);
+    done(null, user.id);
   });
   
   passport.deserializeUser((id, done) => {
     Admin.findByPk(id)
-      .then((admin) => {
-        done(null, admin);
+      .then((user) => {
+        done(null, user);
       })
       .catch((error) => {
         done(error, null);
@@ -110,13 +110,13 @@ passport.use(
     console.log(hashedPwd);
   // have to create the admin here
   try {
-    const admin = await Admin.createAdmin({
+    const user = await Admin.createAdmin({
       firstName: request.body.firstName,
       lastName: request.body.lastName,
       email: request.body.email,
       password: hashedPwd,
     });
-    request.login(admin, (err) => {
+    request.login(user, (err) => {
       if (err) {
         console.log(err);
         response.redirect("/");
@@ -159,18 +159,18 @@ app.get("/signout", (request, response, next) => {
       failureFlash: true,
     }),
     (request, response) => {
-      response.redirect("/");
+      response.redirect("/elections");
     }
   );
 
 app.get("/elections" , connectEnsureLogin.ensureLoggedIn(),async (request , response) => {
-        const loggedInAdmin = request.Admin.id;
-        const userName = request.Admin.firstName + " " + request.Admin.lastName;
+        const loggedInAdmin = request.user.id;
+        const userName = request.user.firstName + " " + request.user.lastName;
         try{
         const displayElections = await Election.getElections(loggedInAdmin);
 
         if(request.accepts("html")) {
-            response.render("displayElections",{
+            response.render("elections",{
                 title: "Online Election Application",
                 userName: userName,
                 displayElections,
@@ -186,7 +186,57 @@ app.get("/elections" , connectEnsureLogin.ensureLoggedIn(),async (request , resp
     }
 });
 
+app.get(
+    "/elections/create",
+    connectEnsureLogin.ensureLoggedIn(),
+    async (request, response) => {
+      return response.render("createnew_election", {
+        title: "Create an election",
+        csrfToken: request.csrfToken(),
+      });
+    }
+  );
 
-
+app.post(
+    "/elections",
+    connectEnsureLogin.ensureLoggedIn(),
+    async (request, response) => {
+      if (request.body.electionName.length < 5) {
+        request.flash("error", "Election name length should be atleast 5");
+        return response.redirect("/elections/create");
+      }
+      try {
+        await Election.addNewElection({
+          electionName: request.body.electionName,
+          adminId: request.user.id,
+        });
+        return response.redirect("/elections");
+      } catch (error) {
+        console.log(error);
+        return response.status(422).json(error);
+      }
+    }
+  );
+  
+  app.get(
+    "/elections/:id",
+    connectEnsureLogin.ensureLoggedIn(),
+    async (request, response) => {
+      try {
+        const election = await Election.getElection(request.params.id);
+        const numberOfQuestions = await Question.getNumberOfQuestions(
+          request.params.id
+        );
+        return response.render("new_election_homepage", {
+          id: request.params.id,
+          title: election.electionName,
+          noq: numberOfQuestions,
+        });
+      } catch (error) {
+        console.log(error);
+        return response.status(422).json(error);
+      }
+    }
+  );
 
 module.exports = app;

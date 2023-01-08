@@ -19,16 +19,16 @@ module.exports = (sequelize, DataTypes) => {
     static getElections(adminId) {
       return this.findAll({
         where: {
-          
+          adminId,
         },
         order: [["id","ASC"]],
       });
     }
 
-    static addNewElection({electionName }) {
+    static addNewElection({electionName , adminId}) {
       return this.create({
         electionName,
-        //adminId,
+        adminId,
       });
     }
 
