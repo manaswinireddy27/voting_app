@@ -121,7 +121,7 @@ passport.use(
         console.log(err);
         response.redirect("/");
       } else {
-        response.redirect("/");
+        response.redirect("/elections");
       }
     });
   } catch (error) {
@@ -163,7 +163,28 @@ app.get("/signout", (request, response, next) => {
     }
   );
 
-    app.get("/elections" , connectEnsureLogin.ensureLoggedIn() , aysnc())
+app.get("/elections" , connectEnsureLogin.ensureLoggedIn(),async (request , response) => {
+        const loggedInAdmin = request.Admin.id;
+        const userName = request.Admin.firstName + " " + request.Admin.lastName;
+        try{
+        const displayElections = await Election.getElections(loggedInAdmin);
+
+        if(request.accepts("html")) {
+            response.render("displayElections",{
+                title: "Online Election Application",
+                userName: userName,
+                displayElections,
+            });
+        } else {
+            return response.json({
+                displayElections,
+            });
+        }
+    } catch (error) {
+        console.log(error);
+        return response.status(422).json(error);
+    }
+});
 
 
 
