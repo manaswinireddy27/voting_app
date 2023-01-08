@@ -12,6 +12,15 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
     }
+
+    static async createAdmin({firstAdmin , lastname,email,password}) {
+        return this.create({
+          firstName,
+          lastName,
+          email,
+          password,
+        });
+    }
   }
   Admin.init({
     firstName: {

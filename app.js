@@ -110,7 +110,7 @@ passport.use(
     console.log(hashedPwd);
   // have to create the admin here
   try {
-    const admin = await Admin.create({
+    const admin = await Admin.createAdmin({
       firstName: request.body.firstName,
       lastName: request.body.lastName,
       email: request.body.email,
@@ -163,7 +163,7 @@ app.get("/signout", (request, response, next) => {
     }
   );
 
-
+    app.get("/elections" , connectEnsureLogin.ensureLoggedIn() , aysnc())
 
 
 
