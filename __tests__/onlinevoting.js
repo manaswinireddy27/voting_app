@@ -13,7 +13,7 @@ function extractCsrfToken(res) {
 }
 
 const login = async (agent, username, password) => {
-    let res = await agent.get("/adminlogin");
+    let res = await agent.get("/login");
     let csrfToken = extractCsrfToken(res);
     res = await agent.post("/session").send({
       email: username,
