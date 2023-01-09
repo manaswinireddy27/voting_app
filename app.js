@@ -108,7 +108,6 @@ passport.use(
 
     const hashedPwd = await bcrypt.hash(request.body.password, saltRounds);
     console.log(hashedPwd);
-  // have to create the admin here
   try {
     const user = await Admin.createAdmin({
       firstName: request.body.firstName,
@@ -131,12 +130,17 @@ passport.use(
   }
 });
 
-app.get("/adminlogin", (request, response) => {
-    response.render("login", { title: "Admin Login", csrfToken: request.csrfToken() });
+app.get("/login", (request, response) => {
+  if (request.user) {
+    return response.redirect("/elections");
+  }
+  response.render("login", {
+    title: "Sign in page",
+    csrfToken: request.csrfToken(),
+  });
 });
 
 app.get("/signout", (request, response, next) => {
-    //Signout
     request.logout((err) => {
       if (err) {
         return next(err);
@@ -146,19 +150,23 @@ app.get("/signout", (request, response, next) => {
   });
   
   app.get("/", async (request, response) => {
-    response.render("index", {
-      title: "Online Election Application",
-      csrfToken: request.csrfToken(),
-    });
+    if (request.user) {
+      return response.redirect("/elections");
+    } else {
+      response.render("index", {
+        title: "Online Election Application",
+        csrfToken: request.csrfToken(),
+      });
+    }
   });
   
   app.post(
     "/session",
     passport.authenticate("local", {
-      failureRedirect: "/adminlogin",
+      failureRedirect: "/login",
       failureFlash: true,
     }),
-    (request, response) => {
+    ( request, response) => {
       response.redirect("/elections");
     }
   );
@@ -191,7 +199,7 @@ app.get(
     connectEnsureLogin.ensureLoggedIn(),
     async (request, response) => {
       return response.render("createnew_election", {
-        title: "Create an election",
+        title: "Create new election",
         csrfToken: request.csrfToken(),
       });
     }
@@ -202,7 +210,7 @@ app.post(
     connectEnsureLogin.ensureLoggedIn(),
     async (request, response) => {
       if (request.body.electionName.length < 5) {
-        request.flash("error", "Election name length should be atleast 5");
+        request.flash("error", "Election name should be atleast 5 characters");
         return response.redirect("/elections/create");
       }
       try {
@@ -223,11 +231,11 @@ app.post(
     connectEnsureLogin.ensureLoggedIn(),
     async (request, response) => {
       try {
-        const election = await Election.getElection(request.params.id);
-        const numberOfQuestions = await Question.getNumberOfQuestions(
+        const election = await Election.retrieveElection(request.params.id);
+        const numberOfQuestions = await Question.countQuestions(
           request.params.id
         );
-        return response.render("new_election_homepage", {
+        return response.render("election_homepage", {
           id: request.params.id,
           title: election.electionName,
           noq: numberOfQuestions,
@@ -245,10 +253,10 @@ app.post(
     connectEnsureLogin.ensureLoggedIn(),
     async (request, response) => {
       try {
-        const election = await Election.getElection(request.params.id);
+        const election = await Election.retrieveElection(request.params.id);
         const questions = await Question.getQuestions(request.params.id);
         if (request.accepts("html")) {
-          return response.render("questions", {
+          return response.render("display_questions", {
             title: election.electionName,
             id: request.params.id,
             questions: questions,
@@ -270,7 +278,7 @@ app.post(
     "/elections/:id/questions/create",
     connectEnsureLogin.ensureLoggedIn(),
     async (request, response) => {
-      return response.render("createnew_question", {
+      return response.render("createnew_ques", {
         id: request.params.id,
         csrfToken: request.csrfToken(),
       });
@@ -282,16 +290,16 @@ app.post(
     connectEnsureLogin.ensureLoggedIn(),
     async (request, response) => {
       if (request.body.question.length < 5) {
-        request.flash("error", "question length should be atleast 5");
+        request.flash("error", "question should be atleast 5 characters");
         return response.redirect(
           `/elections/${request.params.id}/questions/create`
         );
       }
       try {
         const question = await Question.addQuestion({
-          question: request.body.question,
+          question: request.body.questionName,
           description: request.body.description,
-          electionID: request.params.id,
+          electionId: request.params.id,
         });
         return response.redirect(
           `/elections/${request.params.id}/questions/${question.id}`
@@ -303,118 +311,7 @@ app.post(
     }
   );
 
-  app.get(
-    "/elections/:electionId/questions/:questionId/edit",
-    connectEnsureLogin.ensureLoggedIn(),
-    async (request, response) => {
-      try {
-        const question = await Question.getQuestion(request.params.questionId);
-        return response.render("update_question", {
-          electionId: request.params.electionId,
-          questionId: request.params.questionId,
-          questionTitle: question.question,
-          questionDescription: question.description,
-          csrfToken: request.csrfToken(),
-        });
-      } catch (error) {
-        console.log(error);
-        return response.status(422).json(error);
-      }
-    }
-  );
-
-  app.put(
-    "/questions/:questionId/edit",
-    connectEnsureLogin.ensureLoggedIn(),
-    async (request, response) => {
-      try {
-        const updatedQuestion = await Question.updateQuestion({
-          question: request.body.question,
-          description: request.body.description,
-          id: request.params.questionId,
-        });
-        return response.json(updatedQuestion);
-      } catch (error) {
-        console.log(error);
-        return response.status(422).json(error);
-      }
-    }
-  );
-
-  app.delete(
-    "/elections/:electionId/questions/:questionId",
-    connectEnsureLogin.ensureLoggedIn(),
-    async (request, response) => {
-      try {
-        const noq = await Question.getNumberOfQuestions(
-          request.params.electionId
-        );
-        if (noq > 1) {
-          const res = await Question.deleteQuestion(request.params.questionId);
-          return response.json({ success: res === 1 });
-        } else {
-          return response.json({ success: false });
-        }
-      } catch (error) {
-        console.log(error);
-        return response.status(422).json(error);
-      }
-    }
-  );
-
-  //question page
-app.get(
-    "/elections/:id/questions/:questionId",
-    connectEnsureLogin.ensureLoggedIn(),
-    async (request, response) => {
-      try {
-        const question = await Question.getQuestion(request.params.questionId);
-        const options = await Option.getOptions(request.params.questionId);
-        if (request.accepts("html")) {
-          response.render("question_page", {
-            title: question.question,
-            description: question.description,
-            id: request.params.id,
-            questionId: request.params.questionId,
-            options,
-            csrfToken: request.csrfToken(),
-          });
-        } else {
-          return response.json({
-            options,
-          });
-        }
-      } catch (error) {
-        console.log(error);
-        return response.status(422).json(error);
-      }
-    }
-  );
-
-  app.post(
-    "/elections/:id/questions/:questionId",
-    connectEnsureLogin.ensureLoggedIn(),
-    async (request, response) => {
-      if (!request.body.option.length) {
-        request.flash("error", "Please enter option");
-        return response.redirect("/elections");
-      }
-      try {
-        await Option.addOption({
-          option: request.body.option,
-          questionId: request.params.questionId,
-        });
-        return response.redirect(
-          `/elections/${request.params.id}/questions/${request.params.questionId}`
-        );
-      } catch (error) {
-        console.log(error);
-        return response.status(422).json(error);
-      }
-    }
-  );
-
-
+  
 
 
 module.exports = app;
