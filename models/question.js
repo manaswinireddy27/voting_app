@@ -15,6 +15,61 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "electionId",
       });
     }
+    static async getNumberOfQuestions(electionId) {
+      return await this.count({
+        where: {
+          electionId,
+        },
+      });
+    }
+
+    static updateQuestion({ question, description, id }) {
+      return this.update(
+        {
+          question,
+          description,
+        },
+        {
+          returning: true,
+          where: {
+            id,
+          },
+        }
+      );
+    }
+
+    static addQuestion({ question, description, electionId }) {
+      return this.create({
+        question,
+        description,
+        electionId,
+      });
+    }
+
+    static async getQuestion(id) {
+      return await this.findOne({
+        where: {
+          id,
+        },
+      });
+    }
+
+    static deleteQuestion(id) {
+      return this.destroy({
+        where: {
+          id,
+        },
+      });
+    }
+
+    static async getQuestions(electionId) {
+      return await this.findAll({
+        where: {
+          electionId,
+        },
+        order: [["id", "ASC"]],
+      });
+    }
   }
   Question.init({
     questionName: {

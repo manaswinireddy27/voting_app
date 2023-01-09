@@ -3,7 +3,7 @@
 const express = require("express");
 var csrf = require("tiny-csrf");
 const app = express();
-const { Admin , Election } = require("./models");
+const { Admin , Election , Question , Option} = require("./models");
 const bodyParser = require("body-parser");
 var cookieParser = require("cookie-parser");
 app.use(bodyParser.json());
@@ -238,5 +238,183 @@ app.post(
       }
     }
   );
+
+
+  app.get(
+    "/elections/:id/questions",
+    connectEnsureLogin.ensureLoggedIn(),
+    async (request, response) => {
+      try {
+        const election = await Election.getElection(request.params.id);
+        const questions = await Question.getQuestions(request.params.id);
+        if (request.accepts("html")) {
+          return response.render("questions", {
+            title: election.electionName,
+            id: request.params.id,
+            questions: questions,
+            csrfToken: request.csrfToken(),
+          });
+        } else {
+          return response.json({
+            questions,
+          });
+        }
+      } catch (error) {
+        console.log(error);
+        return response.status(422).json(error);
+      }
+    }
+  );
+
+  app.get(
+    "/elections/:id/questions/create",
+    connectEnsureLogin.ensureLoggedIn(),
+    async (request, response) => {
+      return response.render("createnew_question", {
+        id: request.params.id,
+        csrfToken: request.csrfToken(),
+      });
+    }
+  );
+
+  app.post(
+    "/elections/:id/questions/create",
+    connectEnsureLogin.ensureLoggedIn(),
+    async (request, response) => {
+      if (request.body.question.length < 5) {
+        request.flash("error", "question length should be atleast 5");
+        return response.redirect(
+          `/elections/${request.params.id}/questions/create`
+        );
+      }
+      try {
+        const question = await Question.addQuestion({
+          question: request.body.question,
+          description: request.body.description,
+          electionID: request.params.id,
+        });
+        return response.redirect(
+          `/elections/${request.params.id}/questions/${question.id}`
+        );
+      } catch (error) {
+        console.log(error);
+        return response.status(422).json(error);
+      }
+    }
+  );
+
+  app.get(
+    "/elections/:electionId/questions/:questionId/edit",
+    connectEnsureLogin.ensureLoggedIn(),
+    async (request, response) => {
+      try {
+        const question = await Question.getQuestion(request.params.questionId);
+        return response.render("update_question", {
+          electionId: request.params.electionId,
+          questionId: request.params.questionId,
+          questionTitle: question.question,
+          questionDescription: question.description,
+          csrfToken: request.csrfToken(),
+        });
+      } catch (error) {
+        console.log(error);
+        return response.status(422).json(error);
+      }
+    }
+  );
+
+  app.put(
+    "/questions/:questionId/edit",
+    connectEnsureLogin.ensureLoggedIn(),
+    async (request, response) => {
+      try {
+        const updatedQuestion = await Question.updateQuestion({
+          question: request.body.question,
+          description: request.body.description,
+          id: request.params.questionId,
+        });
+        return response.json(updatedQuestion);
+      } catch (error) {
+        console.log(error);
+        return response.status(422).json(error);
+      }
+    }
+  );
+
+  app.delete(
+    "/elections/:electionId/questions/:questionId",
+    connectEnsureLogin.ensureLoggedIn(),
+    async (request, response) => {
+      try {
+        const noq = await Question.getNumberOfQuestions(
+          request.params.electionId
+        );
+        if (noq > 1) {
+          const res = await Question.deleteQuestion(request.params.questionId);
+          return response.json({ success: res === 1 });
+        } else {
+          return response.json({ success: false });
+        }
+      } catch (error) {
+        console.log(error);
+        return response.status(422).json(error);
+      }
+    }
+  );
+
+  //question page
+app.get(
+    "/elections/:id/questions/:questionId",
+    connectEnsureLogin.ensureLoggedIn(),
+    async (request, response) => {
+      try {
+        const question = await Question.getQuestion(request.params.questionId);
+        const options = await Option.getOptions(request.params.questionId);
+        if (request.accepts("html")) {
+          response.render("question_page", {
+            title: question.question,
+            description: question.description,
+            id: request.params.id,
+            questionId: request.params.questionId,
+            options,
+            csrfToken: request.csrfToken(),
+          });
+        } else {
+          return response.json({
+            options,
+          });
+        }
+      } catch (error) {
+        console.log(error);
+        return response.status(422).json(error);
+      }
+    }
+  );
+
+  app.post(
+    "/elections/:id/questions/:questionId",
+    connectEnsureLogin.ensureLoggedIn(),
+    async (request, response) => {
+      if (!request.body.option.length) {
+        request.flash("error", "Please enter option");
+        return response.redirect("/elections");
+      }
+      try {
+        await Option.addOption({
+          option: request.body.option,
+          questionId: request.params.questionId,
+        });
+        return response.redirect(
+          `/elections/${request.params.id}/questions/${request.params.questionId}`
+        );
+      } catch (error) {
+        console.log(error);
+        return response.status(422).json(error);
+      }
+    }
+  );
+
+
+
 
 module.exports = app;
