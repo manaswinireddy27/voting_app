@@ -16,7 +16,7 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
 
-    static async createAdmin({firstAdmin , lastname,email,password}) {
+    static async createAdmin({firstName , lastName,email,password}) {
         return this.create({
           firstName,
           lastName,

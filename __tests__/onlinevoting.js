@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
 const request = require("supertest");
 var cheerio = require("cheerio");
@@ -38,8 +39,46 @@ describe( "Online Election Application Test Suite" , () => {
         }
       });
 
-      test ( "simple test" , async() => {
-        expect(true).toBe(true);
+      test("To signup as a new admin", async () => {
+        res = await agent.get("/signup");
+        const csrfToken = extractCsrfToken(res);
+        res = await agent.post("/admins").send({
+          firstName: "manaswini",
+          lastName: "reddy",
+          email: "manaswini@gmail.com",
+          password: "123456789",
+          _csrf: csrfToken,
+        });
+        expect(res.statusCode).toBe(302);
+      });
+
+      test("to login as a admin", async () => {
+        res = await agent.get("/elections");
+        expect(res.statusCode).toBe(200);
+        await login(agent, "manaswini@gmail.com", "123456789");
+        res = await agent.get("/elections");
+        expect(res.statusCode).toBe(200);
+      });
+
+      test("test  for admin signout", async () => {
+        let res = await agent.get("/elections");
+        expect(res.statusCode).toBe(200);
+        res = await agent.get("/signout");
+        expect(res.statusCode).toBe(302);
+        res = await agent.get("/elections");
+        expect(res.statusCode).toBe(302);
+      });
+
+      test("test to create election", async () => {
+        const agent = request.agent(server);
+        await login(agent, "manaswini@gmail.com", "123456789");
+        const res = await agent.get("/elections/create");
+        const csrfToken = extractCsrfToken(res);
+        const response = await agent.post("/elections").send({
+          electionName: "head boy",
+          _csrf: csrfToken,
+        });
+        expect(response.statusCode).toBe(302);
       });
 
 });

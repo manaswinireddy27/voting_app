@@ -11,7 +11,56 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      Option.belongsTo(models.Question, {
+        foreignKey: "questionId",
+        onDelete: "CASCADE",
+      });
     }
+
+    static retrieveOptions(questionId) {
+      return this.findAll({
+        where: {
+          questionId,
+        },
+        order: [["id","ASC"]],
+      });
+    }
+
+    static retrieveOption(id) {
+      return this.findOne({
+        where: {
+          id,
+        },
+      });
+    }
+
+    static addNewOption({option,questionId}) {
+      return this.create({
+        option,
+        questionId,
+      });
+    }
+
+    static updateOption({option , id}) {
+      return this.update({
+        option,
+      },
+      {
+        where: {id,},
+      }
+      );
+    }
+
+    static deleteOption(id) {
+      return this.destroy({
+        where: {
+          id,
+        },
+      });
+    }
+
+
+
   }
   Option.init({
     option: { 
