@@ -289,15 +289,9 @@ app.post(
     "/elections/:id/questions/create",
     connectEnsureLogin.ensureLoggedIn(),
     async (request, response) => {
-      if (request.body.question.length < 5) {
-        request.flash("error", "question should be atleast 5 characters");
-        return response.redirect(
-          `/elections/${request.params.id}/questions/create`
-        );
-      }
       try {
         const question = await Question.addQuestion({
-          question: request.body.questionName,
+          questionName: request.body.questionName,
           description: request.body.description,
           electionId: request.params.id,
         });
@@ -311,7 +305,7 @@ app.post(
     }
   );
 
-  
+
 
 
 module.exports = app;
