@@ -8,7 +8,7 @@
     <title>New question</title>
 </head>
 <body class="bg-gray-50">
-    <%- include('header.ejs') %>
+    <div class="text-center"><%- include('header.ejs') %></div>
     <div class="flex gap-1 mx-10 mt-6 bg-gray-50">
         
         <a href="/elections" class="text-purple-800 hover:text-purple-600">All Elections</a>
@@ -35,7 +35,7 @@
                     <input id="questionName" name="questionName" type="text" placeholder="Question" class="border w-full h-5 px-3 py-5 mt-2 hover:outline-none focus:outline-none focus:ring-indigo-500 focus:ring-1 rounded-md" required>
                     <label for="description" class="block mt-3 font-semibold">Description of the question</label>
                     <textarea id="description" name="description" class="border w-full px-2 py-1 mt-2 hover:outline-none focus:outline-none focus:ring-indigo-500 focus:ring-1 rounded-md" placeholder="Description" rows="4" cols="20"></textarea>
-                    <button type="submit" class="mt-6 w-full bg-black text-white py-2 px-6 rounded-md hover:bg-white hover:text-black ">Add new question</button>
+                    <button type="submit" class="mt-6 w-full bg-green-600 text-white py-2 px-6 rounded-md hover:bg-white hover:text-black ">Add new question</button>
                 </form>
             </div>
         </div>
